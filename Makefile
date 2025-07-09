@@ -1,5 +1,11 @@
 .PHONY: all opt unit clean debug release test unittest allunit benchmark docs doxygen format sqlite
 
+# WITH_NIEYUANYUAN
+# Note: need to update the base revision no after upgraded to a
+# new duckdb version
+PARENT_REVISION := "0b83e5d2f68bc02dfefde74b846bd039f078affa"
+# WITH_NIEYUANYUAN
+
 all: release
 opt: release
 unit: unittest
@@ -392,6 +398,16 @@ unittest_release: release
 	build/release/test/unittest
 	build/release/tools/sqlite3_api_wrapper/test_sqlite3_api_wrapper
 
+# WITH_NIEYUANYUAN
+unittest_reldebug: reldebug
+	build/reldebug/test/unittest
+	build/reldebug/tools/sqlite3_api_wrapper/test_sqlite3_api_wrapper
+
+unittest_relassert: relassert
+	build/relassert/test/unittest
+	build/relassert/tools/sqlite3_api_wrapper/test_sqlite3_api_wrapper
+# WITH_NIEYUANYUAN
+
 unittestci:
 	python3 scripts/run_tests_one_by_one.py build/debug/test/unittest --time_execution
 	build/debug/tools/sqlite3_api_wrapper/test_sqlite3_api_wrapper
@@ -448,6 +464,37 @@ tidy-check-diff:
 	cd ../../ && \
 	git diff origin/main . ':(exclude)tools' ':(exclude)extension' ':(exclude)test' ':(exclude)benchmark' ':(exclude)third_party' ':(exclude)src/common/adbc' ':(exclude)src/main/capi' | python3 scripts/clang-tidy-diff.py -path build/tidy -quiet ${TIDY_THREAD_PARAMETER} ${TIDY_BINARY_PARAMETER} ${TIDY_PERFORM_CHECKS} -p1
 
+# WITH_NIEYUANYUAN
+tidy-check-diff-ci:
+	@mkdir -p ./build/tidy && \
+	cd build/tidy && \
+	cmake -DCLANG_TIDY=1 -DDISABLE_UNITY=1 -DBUILD_EXTENSIONS=parquet -DBUILD_PYTHON_PKG=TRUE -DBUILD_SHELL=0 ../..
+	@cd ../../ \
+	rm build/lint.log build/lint2.log
+	@# git fetch origin ${PARENT_REVISION} --depth=1
+	@git diff --name-only HEAD ${PARENT_REVISION} \
+		| grep "\.cpp" \
+		| grep -v tools \
+		| grep -v test \
+		| grep -v benchmark \
+		| grep -v third_party \
+		| grep -v src/common/abc \
+		| grep -v src/main/capi \
+		| xargs ./lint.py > build/lint.log
+	@git diff --name-only HEAD ${PARENT_REVISION} \
+		| grep "\.cpp" \
+		| grep -v tools \
+		| grep -v test \
+		| grep -v benchmark \
+		| grep -v third_party \
+		| grep -v src/common/abc \
+		| grep -v src/main/capi \
+		| xargs -i grep {} build/lint.log > build/lint2.log \
+		|| true
+	@[ $$(grep -v 'tools/clang-tidy' build/lint2.log | grep -v 'file not found' | grep -v 'Unknown file name' | wc -l) = 0 ] \
+		|| ( sed '/clang-diagnostic-error/,+2d' build/lint.log | sed '/clang-tidy/d' | sed '/No relevant changes found/d' | tr -s '\n'; exit 1 )
+# WITH_NIEYUANYUAN
+
 tidy-fix:
 	mkdir -p ./build/tidy && \
 	cd build/tidy && \
@@ -478,6 +525,13 @@ format-main:
 
 format-feature:
 	python3 scripts/format.py feature --fix --noconfirm
+
+# WITH_NIEYUANYUAN
+macro-check:
+	@find src extension examples benchmark -type f -name "*.h" -o -name "*.hpp" -o -name "*.cpp" \
+		| grep -v third_party \
+		| xargs python3 scripts/check_macro_comments.py
+# WITH_NIEYUANYUAN
 
 third_party/sqllogictest:
 	git clone --depth=1 --branch hawkfish-statistical-rounding https://github.com/duckdb/sqllogictest.git third_party/sqllogictest

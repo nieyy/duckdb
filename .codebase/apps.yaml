@@ -1,0 +1,8 @@
+codecov:
+  status:
+    diff:
+      default:
+        minimum_coverage: 90% # added-code coverage in one MR
+        paths:
+          - "src/*"
+          - "extension/"

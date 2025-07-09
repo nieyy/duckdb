@@ -1,0 +1,165 @@
+name: DUCKDB_CI
+trigger:
+  change:
+  manual:
+jobs:
+  job_1:
+    name: check_code_quality
+    image: ???
+    retry: 1
+    runs-on:
+      spec: m1.2xlarge
+    steps:
+      - name: checkout action process
+        uses: actions/checkout
+        inputs:
+          depth: 1
+      - name: format macro lint
+        commands:
+          - echo "# Setup python3.13 environment"
+          - tar zxf $HOME/python3.tar.gz -C $HOME/
+          - mkdir -p /home/nieyuanyuan
+          - ln -sf $HOME/python3 /home/nieyuanyuan/
+          - export PATH=$HOME/python3/bin:$PATH
+          - export CC=$HOME/gcc-9.4.0/bin/gcc
+          - export CXX=$HOME/gcc-9.4.0/bin/g++
+          - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/gcc-prerequisites/gmp/lib:$HOME/gcc-prerequisites/mpfr/lib:$HOME/gcc-prerequisites/mpc/lib:$HOME/gcc-prerequisites/isl/lib
+          - echo "# Check code format"
+          - make format-check
+          - echo "# Check 'USE_LOG_STORE' macro"
+          - make macro-check
+          - echo "# Check code lint"
+          - make tidy-check-diff-ci
+      - name: upload artifacts lint
+        uses: actions/upload-artifact
+        inputs:
+          name: mock_release_build_lint
+          path: build/lint.log
+        parallel-with-next-step: true
+      - name: upload artifacts lint2
+        uses: actions/upload-artifact
+        inputs:
+          name: mock_release_build_lint2
+          path: build/lint2.log
+
+  job_2:
+    name: unit_test_release_debian9
+    depends: [ job_1 ]
+    image: ???
+    retry: 1
+    runs-on:
+      spec: m1.8xlarge
+    steps:
+      - name: checkout action process
+        uses: actions/checkout
+        inputs:
+          depth: 1
+
+      - name: ut release
+        commands:
+          - echo "# Setup python3.13 environment"
+          - tar zxf $HOME/python3.tar.gz -C $HOME/
+          - mkdir -p /home/nieyuanyuan
+          - ln -sf $HOME/python3 /home/nieyuanyuan/
+          - export PATH=$HOME/python3/bin:$PATH
+          - export CC=$HOME/gcc-9.4.0/bin/gcc
+          - export CXX=$HOME/gcc-9.4.0/bin/g++
+          - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/gcc-prerequisites/gmp/lib:$HOME/gcc-prerequisites/mpfr/lib:$HOME/gcc-prerequisites/mpc/lib:$HOME/gcc-prerequisites/isl/lib
+          - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/gcc-9.4.0/lib64
+          - echo "# Build release version"
+          - make -j release
+          - echo "# Unit tests start."
+          - make -j unittest_release
+
+  job_3:
+    name: unit_test_debug_debian9
+    depends: [ job_1 ]
+    image: ???
+    retry: 1
+    runs-on:
+      spec: m1.8xlarge
+    steps:
+      - name: checkout action process
+        uses: actions/checkout
+        inputs:
+          depth: 1
+
+      - name: ut debug 
+        commands:
+          - echo "# Setup python3.13 environment"
+          - tar zxf $HOME/python3.tar.gz -C $HOME/
+          - mkdir -p /home/nieyuanyuan
+          - ln -sf $HOME/python3 /home/nieyuanyuan/
+          - export PATH=$HOME/python3/bin:$PATH
+          - export CC=$HOME/gcc-9.4.0/bin/gcc
+          - export CXX=$HOME/gcc-9.4.0/bin/g++
+          - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/gcc-prerequisites/gmp/lib:$HOME/gcc-prerequisites/mpfr/lib:$HOME/gcc-prerequisites/mpc/lib:$HOME/gcc-prerequisites/isl/lib
+          - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/gcc-9.4.0/lib64
+          - echo "# Build debug version"
+          - make -j debug
+          - echo "# Build reldebug version"
+          - make -j reldebug
+          - echo "# Unit tests start."
+          - make -j unittest_reldebug
+
+  job_4:
+    name: unit_test_release_debian10
+    depends: [ job_1 ]
+    image: ???
+    retry: 1
+    runs-on:
+      spec: m1.8xlarge
+    steps:
+      - name: checkout action process
+        uses: actions/checkout
+        inputs:
+          depth: 1
+
+      - name: ut release
+        commands:
+          - apt-get -y install ccache
+          - echo "# Setup python3.13 environment"
+          - tar zxf $HOME/python3.tar.gz -C $HOME/
+          - mkdir -p /home/nieyuanyuan
+          - ln -sf $HOME/python3 /home/nieyuanyuan/
+          - export PATH=$HOME/python3/bin:$PATH
+          - export CC=$HOME/gcc-9.4.0/bin/gcc
+          - export CXX=$HOME/gcc-9.4.0/bin/g++
+          - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/gcc-prerequisites/gmp/lib:$HOME/gcc-prerequisites/mpfr/lib:$HOME/gcc-prerequisites/mpc/lib:$HOME/gcc-prerequisites/isl/lib
+          - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/gcc-9.4.0/lib64
+          - echo "# Build release version"
+          - make -j release
+          - echo "# Unit tests start."
+          - make -j unittest_release
+
+  job_5:
+    name: unit_test_debug_debian10
+    depends: [ job_1 ]
+    image: ???
+    retry: 1
+    runs-on:
+      spec: m1.8xlarge
+    steps:
+      - name: checkout action process
+        uses: actions/checkout
+        inputs:
+          depth: 1
+
+      - name: ut debug
+        commands:
+          - apt-get -y install ccache
+          - echo "# Setup python3.13 environment"
+          - tar zxf $HOME/python3.tar.gz -C $HOME/
+          - mkdir -p /home/nieyuanyuan
+          - ln -sf $HOME/python3 /home/nieyuanyuan/
+          - export PATH=$HOME/python3/bin:$PATH
+          - export CC=$HOME/gcc-9.4.0/bin/gcc
+          - export CXX=$HOME/gcc-9.4.0/bin/g++
+          - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/gcc-prerequisites/gmp/lib:$HOME/gcc-prerequisites/mpfr/lib:$HOME/gcc-prerequisites/mpc/lib:$HOME/gcc-prerequisites/isl/lib
+          - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/gcc-9.4.0/lib64
+          - echo "# Build debug version"
+          - make -j debug
+          - echo "# Build reldebug version"
+          - make -j reldebug
+          - echo "# Unit tests start."
+          - make -j unittest_reldebug
